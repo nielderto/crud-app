@@ -1,24 +1,9 @@
 import Router from "express";
 import { prisma } from "../lib/prisma";
-import { auth } from "../lib/auth";
-import type { Request, Response, NextFunction } from "express";
+import { requireAuth } from "../middleware/requireAuth";
+import type { Request, Response } from "express";
 
 export const PostRoute = Router();
-
-const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-    const session = await auth.api.getSession({
-        headers: req.headers
-    });
-
-    if (!session) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-    }
-    
-    res.locals.session = session;
-
-    next();
-}
 
 PostRoute.get("/", requireAuth, async (req, res) => {
     try {
@@ -104,6 +89,43 @@ PostRoute.put("/:id", requireAuth, async (req: Request, res: Response) => {
         res.status(500).json({ error: "Internal server error" });
     }
 })
+
+// Get posts by username (for profile)
+PostRoute.get("/user/:username", requireAuth, async (req: Request, res: Response) => {
+    try {
+        const username = req.params.username as string;
+
+        const user = await prisma.user.findFirst({
+            where: { username },
+            select: { id: true, name: true, username: true, createdAt: true },
+        });
+
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+
+        const posts = await prisma.post.findMany({
+            where: { authorId: user.id },
+            include: { author: { select: { name: true, username: true } } },
+            orderBy: { createdAt: "desc" },
+        });
+
+        const comments = await prisma.comment.findMany({
+            where: { authorId: user.id },
+            include: {
+                author: { select: { name: true, username: true } },
+                post: { select: { id: true, title: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        res.status(200).json({ user, posts, comments });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
 
 PostRoute.get("/:id", requireAuth, async (req: Request, res: Response) => {
     try {

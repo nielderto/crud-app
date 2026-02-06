@@ -9,12 +9,25 @@ import { ArrowLeft, Trash2, Pencil } from "lucide-react";
 import { usePost } from "@/hooks/use-posts";
 import LoadingScreen from "@/components/app-ui/LoadingScreen";
 import Redirect from "@/components/app-ui/Redirect";
+import CommentSection from "@/components/app-ui/CommentSection";
+import Link from "next/link";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function PostPage() {
     const router = useRouter();
     const params = useParams();
     const { data: session, isPending } = authClient.useSession();
-    const { post, loading } = usePost(params.id as string, !!session);
+    const { post, loading } = usePost(params.id as string);
     const [deleting, setDeleting] = useState(false);
 
     if (!isPending && !session) {
@@ -28,7 +41,6 @@ export default function PostPage() {
     } : null;
 
     const handleDelete = async () => {
-        if (!confirm("Are you sure you want to delete this post?")) return;
         setDeleting(true);
 
         try {
@@ -68,15 +80,17 @@ export default function PostPage() {
 
                 <article>
                     <div className="flex items-center gap-3 mb-6">
-                        <img
-                            src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${post.author.username || "user"}`}
-                            alt="avatar"
-                            className="h-10 w-10 rounded-full bg-neutral-800"
-                        />
+                        <Link href={`/dashboard/profile/${post.author.username}`}>
+                            <img
+                                src={`https://api.dicebear.com/9.x/pixel-art/svg?seed=${post.author.username || "user"}`}
+                                alt="avatar"
+                                className="h-10 w-10 rounded-full bg-neutral-800 cursor-pointer hover:ring-2 hover:ring-emerald-500/50 transition-all"
+                            />
+                        </Link>
                         <div>
-                            <p className="text-sm font-medium text-white">
+                            <Link href={`/dashboard/profile/${post.author.username}`} className="text-sm font-medium text-white hover:text-emerald-400 transition-colors">
                                 {post.author.name || post.author.username}
-                            </p>
+                            </Link>
                             <p className="text-xs text-neutral-500">
                                 @{post.author.username} · {new Date(post.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {new Date(post.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                             </p>
@@ -104,19 +118,48 @@ export default function PostPage() {
                                 <Pencil className="h-3.5 w-3.5" />
                                 Edit
                             </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleDelete}
-                                disabled={deleting}
-                                className="gap-1.5 text-red-400 border-neutral-800 hover:text-red-300 hover:bg-red-950/30 hover:border-red-900/50 cursor-pointer"
-                            >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                {deleting ? "Deleting..." : "Delete"}
-                            </Button>
+
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={deleting}
+                                        className="gap-1.5 text-red-400 border-neutral-800 hover:text-red-300 hover:bg-red-950/30 hover:border-red-900/50 cursor-pointer"
+                                    >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                        {deleting ? "Deleting..." : "Delete"}
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent className="bg-neutral-900 border-neutral-800">
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle className="text-white">Are you sure?</AlertDialogTitle>
+                                        <AlertDialogDescription className="text-neutral-400">
+                                            This will permanently delete your post. This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel className="bg-transparent border-neutral-700 text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer">
+                                            Cancel
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={handleDelete}
+                                            className="bg-red-600 hover:bg-red-500 text-white border-none cursor-pointer"
+                                        >
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
                         </div>
                     )}
                 </article>
+
+                <CommentSection
+                    postId={post.id}
+                    postAuthorId={post.authorId}
+                    currentUserId={session!.user.id}
+                />
             </main>
         </div>
     );

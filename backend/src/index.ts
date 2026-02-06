@@ -3,6 +3,7 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth";
 import dotenv from "dotenv/config";
 import { PostRoute } from "./routes/post";
+import { CommentsRoute } from "./routes/comments";
 import cors from "cors";
 
 const app = express();
@@ -20,6 +21,7 @@ app.use(express.json());
 const PORT =  process.env.PORT || 3001;
 
 app.use("/api/posts", PostRoute);
+app.use("/api/comments", CommentsRoute);
 
 app.get("/", (req, res) => {
     res.send("Hello World");

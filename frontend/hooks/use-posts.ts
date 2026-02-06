@@ -12,19 +12,22 @@ interface Post {
     createdAt: string;
 }
 
-export function usePosts(sessionReady: boolean) {
+export function usePosts(searchQuery?: string) {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchPosts = useCallback(async (query?: string) => {
+        setLoading(true);
         try {
             const url = query
                 ? `http://localhost:3001/api/posts?search=${encodeURIComponent(query)}`
                 : "http://localhost:3001/api/posts";
 
             const res = await fetch(url, { credentials: "include" });
-            const data = await res.json();
-            setPosts(data.posts || []);
+            if (res.ok) {
+                const data = await res.json();
+                setPosts(data.posts || []);
+            }
         } catch (error) {
             console.error("Failed to fetch posts:", error);
         } finally {
@@ -33,27 +36,24 @@ export function usePosts(sessionReady: boolean) {
     }, []);
 
     useEffect(() => {
-        if (sessionReady) fetchPosts();
-    }, [sessionReady, fetchPosts]);
+        fetchPosts(searchQuery);
+    }, [searchQuery, fetchPosts]);
 
     return { posts, loading, fetchPosts };
 }
 
-export function usePost(id: string, sessionReady: boolean) {
+export function usePost(id: string) {
     const [post, setPost] = useState<Post | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!sessionReady) return;
-
         const fetchPost = async () => {
             try {
                 const res = await fetch(`http://localhost:3001/api/posts/${id}`, {
                     credentials: "include",
                 });
-                const data = await res.json();
-
                 if (res.ok) {
+                    const data = await res.json();
                     setPost(data.post);
                 }
             } catch (error) {
@@ -64,7 +64,7 @@ export function usePost(id: string, sessionReady: boolean) {
         };
 
         fetchPost();
-    }, [id, sessionReady]);
+    }, [id]);
 
     return { post, loading };
 }
